@@ -12,7 +12,7 @@
    "description": "",
    "manifest_version": 2,
    "name": "IterYoutubeGif",
-   "permissions": [ "tabs", "activeTab", "contextMenus", "http://*/*", "https://*/*" ],
+   "permissions": [ "tabs", "activeTab", "contextMenus", "http://*/*" ],
    "update_url": "https://clients2.google.com/service/update2/crx",
    "version": "1.0",
    "web_accessible_resources": [ "main.css", "script.js","images/record.png",

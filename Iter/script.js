@@ -6,6 +6,7 @@ var source     = null;
 var elements   = {};
 var events     = [];
 var frames     = [];
+var framesBuffer = [];
 var embeds     = {};
 var image      = null;
 var timer      = null;
@@ -15,6 +16,7 @@ var capturing  = false;
 var playing    = false;
 var settOpen   = false;
 var frameCount = 0;
+var frameBufferCount = 0;
 var vScale     = 1;
 var cfWidth    = 320, cfHeight = 240;
 var localFile  = "";
@@ -25,9 +27,11 @@ var cbX        = 0, cbY = 0, cbW = 200, cbH = 150;
 var cropX      = 0, cropY = 0;
 var srcWidth   = 0, srcHeight = 0;
 var getNextFrame;
+var getNextFrameBuffer;
 
 var cQuality     = "Medium";
 var cFPS         = 10;
+// 녹화 가능한 최대 프레임 수
 var cMaxFrames   = 500;
 var cSize        = 320;
 var injectButton = true;
@@ -69,8 +73,10 @@ function init() {
 	ne(oBox, 'video', {src: playbackUrl, id : "playbackVideo", crossOrigin : "anonymous", controls: "controls", width : "480px", height : "280px"});
 	ne(oBox, 'img', {src: chrome.extension.getURL('images/record.png'), id: 'recordBtn', class: 'menuIcon', title: 'Record'});
 	ne(oBox, 'img', {src: chrome.extension.getURL('images/stop.png'), id: 'encodeBtn', class: 'menuIcon', title: 'Encode'});
+	ne(oBox, 'img', {src: chrome.extension.getURL('images/stop.png'), id: 'encodeBufferBtn', class: 'menuIcon', title: 'Encode'});
 	addEvent(elements["recordBtn"], 'click', startCapture, "options");
 	addEvent(elements["encodeBtn"], 'click', generate, "options");
+	addEvent(elements["encodeBufferBtn"], 'click', generateFromBuffer, "options");
 	findVideo();
 }
 
@@ -213,6 +219,10 @@ function selectVideoElement(videoElement) {
 	addEvent(source, 'seeking', onSeeking, "seekControll");
 	addEvent(source, 'seeked', onSeeked, "seekControll");
 
+	// 수정한 부분
+	// 버퍼를 쌓기 시작함
+	startCaptureBuffer();
+
 	try {
 		var testImage = getFrameImage(source, 0.1);
 		var testCtx   = testImage.getContext('2d');
@@ -276,15 +286,27 @@ function pauseCapture(maxReach) {
 	elements["recordBtn"].src = chrome.extension.getURL('images/record.png');
 }
 
+
 function captureFrame(e) {
+
+	console.log(frameCount);
+	frames[frameCount++] = getFrameImage(source);
+	if(frameCount >= cMaxFrames) pauseCapture(true);
+}
+
+
+function startCaptureBuffer(){
+	timerBuffer = setInterval(captureFrameBuffer, 1000 / cFPS);
+}
+
+function captureFrameBuffer(e){
 	if(isQueueFull())
 		deQueue();
 
 	enQueue(getFrameImage(source));
-	console.log(frameCount);
-	
-	if(frameCount >= cMaxFrames) pauseCapture(true);
+	console.log(frameBufferCount);
 }
+
 
 function isQueueFull(){
 	if(((framesRear+1)%cQueueSize) == framesFront)
@@ -302,8 +324,8 @@ function enQueue(frameImage){
 	if(isQueueFull())
 		return;
 
-	frameCount++;
-	frames[framesRear] = frameImage;
+	frameBufferCount++;
+	framesBuffer[framesRear] = frameImage;
 	framesRear = (framesRear+1)%cQueueSize;
 }
 
@@ -311,14 +333,14 @@ function deQueue(){
 	if(isQueueEmpty())
 		return;
 
-	frameCount--;
-	var frame = frames[framesFront];
+	frameBufferCount--;
+	var frame = framesBuffer[framesFront];
 	framesFront = (framesFront+1)%cQueueSize;
 	return frame;
 }
 
 function clearQueue(){
-	return deQueueFor(frameCount);
+	return deQueueFor(frameBufferCount);
 }
 
 // javascript는 함수 오버로딩이 없단다...
@@ -333,19 +355,9 @@ function deQueueFor(num){
 	// for(var i = 0; i < num; i++)
 	// 	DeQueue();
 
-	frameCount -= num;
+	frameBufferCount -= num;
 	framesFront = framesFrontDesti;
 	return true;
-}
-
-// 이 함수를 사용하지 못하고 있는데
-// 사용할 수 있도록 고치면 좋을 거 같다
-function getFrame(i){
-	var index = (framesFront+i)%cQueueSize;
-	if(index > framesRear)
-		return null;
-
-	return frames[index];
 }
 
 function stopCapture(e) {
@@ -357,9 +369,14 @@ function stopCapture(e) {
 	}
 }
 
+
+function stopCaptureBuffer(){
+	clearInterval(timerBuffer);
+}
+
 function generate() {
 
-	var cFrame  = framesFront;
+	var cFrame  = 0;
 	var quality = getQuality();
 	var delay   = 1000 / cFPS;
 	var width   = frames[0].width;
@@ -371,7 +388,6 @@ function generate() {
 			return {canEncode: false};
 		} 
 		console.log("generate");
-		cFrame = cFrame%cQueueSize;
 		return {
 			canEncode: true, 
 			frame: cFrame, 
@@ -382,11 +398,43 @@ function generate() {
 			delay: delay, 
 			imageData: frames[cFrame++].getContext('2d').getImageData(0, 0, width, height).data,
 			// 이 조건이 맞으면 탈출
-			last: (cFrame == framesRear)
+			last: (cFrame == frameCount)
 		}
 	}
 	
 	chrome.runtime.sendMessage({command: "startEncoding", frameLength: frames.length}, encodingComplete);
+}
+
+function generateFromBuffer() {
+
+	var cFrame  = framesFront;
+	var quality = getQuality();
+	var delay   = 1000 / cFPS;
+	var width   = framesBuffer[cFrame].width;
+	var height  = framesBuffer[cFrame].height;
+
+	stopCaptureBuffer();
+	
+	getNextFrame = function() {
+		console.log("generate");
+		console.log(cFrame);
+		cFrame = cFrame%cQueueSize;
+		return {
+			canEncode: true, 
+			frame: cFrame, 
+			frameLength: framesBuffer.length, 
+			width: width, 
+			height: height, 
+			quality: quality, 
+			delay: delay, 
+			imageData: framesBuffer[cFrame++].getContext('2d').getImageData(0, 0, width, height).data,
+			// 이 조건이 맞으면 탈출
+			last: (cFrame == framesRear)
+		}
+	}
+	
+	console.log(framesBuffer.length);
+	chrome.runtime.sendMessage({command: "startEncoding", frameLength: framesBuffer.length}, encodingComplete);
 }
 
 function encodingComplete(response) {
@@ -394,6 +442,7 @@ function encodingComplete(response) {
 	fileSize  = response.size;
 	sizeMB    = fileSize / 1048576;
 	ne(oBox, 'a', {href: localFile, download: 'animation', id: 'saveLink'},  'GIF 다운로드');
+
 }
 
 function getFrameImage(video) {
