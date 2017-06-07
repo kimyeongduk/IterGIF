@@ -1,22 +1,21 @@
 #IterYoutubeGIF {
-	position: fixed;
-	width: 480px;
-	height: 320px;
-	top: 10px;
-	right: 10px;
-	color: #000;
-	font-size: 15px;
-	font-family: "Times New Roman", Times, serif;
-	padding: 10px;
-	background-color: #F9F9F9;
-	box-shadow: 0px 0px 7px #888;
-	border-radius: 5px;
-	z-index: 2100000000;
-	
-	-webkit-box-sizing: content-box;
-	-moz-box-sizing: content-box;
-	box-sizing: content-box;
-	line-height: normal;
+    position: fixed;
+    width: 480px;
+    top: 10px;
+    right: 10px;
+    color: #000;
+    font-size: 15px;
+    font-family: "Times New Roman", Times, serif;
+    padding: 10px 15px 10px 15px;
+    background-color: #F9F9F9;
+    box-shadow: 0px 0px 7px #888;
+    border-radius: 5px;
+    z-index: 2100000000;
+    -webkit-box-sizing: content-box;
+    -moz-box-sizing: content-box;
+    box-sizing: content-box;
+    line-height: normal;
+    font-family: sans-serif;
 }
 
 #IterYoutubeGIF input[type=button] {
@@ -26,6 +25,21 @@
 	margin-left: 5px;
 	cursor: pointer;
 	border-radius: 3px;
+}
+
+#extLogo {
+    position: relative;
+    margin: 0px 0px 10px 0px;
+}
+
+#logo1 {
+    font-size: 30px;
+    font-weight: 600;
+}
+
+#logo2 {
+    font-size: 15px;
+    color: gray;
 }
 
 .menuIcon {
@@ -38,7 +52,184 @@
 	min-width: 20px;
 }
 
-#IterYoutubeGIF a:link { font-size: 15px; color: #00F; text-decoration: none; }
+.extMenuBar {
+    position: relative;
+    margin-top: 3px;
+    padding-top: 10px;
+}
+
+#extSettings {
+    display: inherit;
+    float: left;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    filter: alpha(opacity = 70);
+    opacity: 0.7;
+}
+
+    #extSettings:hover {
+        filter: alpha(opacity = 100);
+        opacity: 1;
+    }
+
+#extSettings img{
+    margin-right: 5px;
+}
+
+#settingMenu1, #settingMenu2, #settingMenu3 {
+    display: none;
+    float: left;
+    border: 1px solid black;
+}
+
+.settingMenu span {
+    display: inline-block;
+}
+
+    .settingMenu .settingName {
+        float: left;
+        left: 0px;
+        padding: 4px 7px 4px 7px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .settingMenu .settingContainer {
+        float: right;   
+        right: 0px;
+    }
+
+        .settingMenu .settingContainer .settingItem {
+            padding: 4px 7px 4px 7px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            background-color: black;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .settingMenu .settingContainer .settingItem:hover {
+            padding: 4px 7px 4px 7px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            background-color: black;
+            text-decoration: underline;
+        }
+
+            .settingMenu .settingContainer .settingItem:first-child {
+                border-left: 1px solid black;
+            }
+
+            .settingMenu .settingContainer .settingItem:last-child {
+                border-right: 1px solid black;
+            }
+
+#confirmSetting {
+    float: left;
+    font-size: 14px;
+    font-weight: 600;
+    filter: alpha(opacity = 70);
+    opacity: 0.7;
+    display:none;
+}
+
+#btnTimes {
+    float: right;
+}
+
+.btnTime {
+    background-color: #FF758F;
+    padding: 4px 7px 4px 7px;
+    font-size: 12px;
+    color: black;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 3px;
+    filter: alpha(opacity = 70);
+    opacity: 0.7;
+}
+
+    .btnTime:hover {
+        filter: alpha(opacity = 100);
+        opacity: 1;
+    }
+
+.btnTime img {
+    display: inline-block;
+    margin-right: 3px;
+}
+
+.btnTime span {
+    display: inline-block;
+    width: 25px;
+    text-align: center;
+}
+
+.downloadBtn {
+    width: 50px;
+    height: 50px;
+    display:block;
+	float : right;
+	margin-right : 30px;
+}
+
+.downloadImage {
+	width : 50px;
+	height : 50px;
+	margin : 15px;
+}
+
+
+.resultBox {
+    background-color: #EEEEEE;
+    max-height: 400px;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    border-top: 1px solid gray;
+    border-bottom: 1px solid gray;
+}
+
+    .resultBox .resultProgressItem {
+        position: relative;
+    }
+
+        .resultBox .resultProgressItem .resultProgressBg {
+            position: relative;
+            height: 30px;
+        }
+
+        .resultBox .resultProgressItem .resultProgressBar {
+            top: 0;
+            left: 0;
+            position: absolute;
+            background-color: #4B4B4B;
+            height: 30px;
+            width: 0%;
+        }
+
+        .resultBox .resultProgressItem .resultProgressCaption {
+            width: 160px;
+            position: absolute;
+            top: 5px;
+            left: 50%;           
+            margin-left: -80px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+
+        .resultBox .resultItem {
+            display: none;
+        }
+    
+#IterYoutubeGIF a:link {
+    font-size: 15px;
+    color: #00F;
+    text-decoration: none;
+}
 #IterYoutubeGIF a:visited { font-size: 15px; color: #00F; text-decoration: none; }
 #IterYoutubeGIF a:hover { text-decoration: underline; }
 #IterYoutubeGIF a:active { color: #039; }

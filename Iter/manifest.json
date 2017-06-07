@@ -1,20 +1,36 @@
 {
-   "background": {
-      "persistent": false,
-      "scripts": [ "background.js" ]
-   },
-   "browser_action": {
-      "default_icon": {
-         "19": "images/record.png",
-         "38": "images/record.png"
-      }
-   },
-   "description": "",
-   "manifest_version": 2,
-   "name": "IterYoutubeGif",
-   "permissions": [ "tabs", "activeTab", "contextMenus", "http://*/*" ],
-   "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "1.0",
-   "web_accessible_resources": [ "main.css", "script.js","images/record.png",
-   "images/recording.png", "images/stop.png", "classes/GIFWorker.js" ]
+  "background": {
+    "persistent": false,
+    "scripts": [ "background.js" ]
+  },
+  "browser_action": {
+    "default_icon": {
+      "19": "images/record.png",
+      "38": "images/record.png"
+    }
+  },
+  "description": "",
+  "manifest_version": 2,
+  "name": "IterYoutubeGif",
+  "permissions": [ "tabs", "activeTab", "contextMenus", "http://*/*" ],
+
+  "content_scripts": [
+    {
+      "run_at": "document_end",
+      "matches": [ "https://*/*" ],
+      "js": [ "jquery-3.2.1.min.js"]
+    }
+  ],
+
+  "update_url": "https://clients2.google.com/service/update2/crx",
+  "version": "1.0",
+  "web_accessible_resources": [
+    "main.css",
+    "script.js",
+    "classes/GIFWorker.js",
+    "images/download.png",
+    "images/delete.png",
+    "images/timeback.png",
+    "images/settings.png"
+  ]
 }

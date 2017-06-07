@@ -1,4 +1,5 @@
-var ccid       = "IterYoutubeGIF";
+
+var ccid = "IterYoutubeGIF";
 var active     = true;
 var oBox       = null;
 var elCont     = null;
@@ -6,17 +7,17 @@ var source     = null;
 var elements   = {};
 var events     = [];
 var frames     = [];
-var framesBuffer = [];
 var embeds     = {};
 var image      = null;
 var timer      = null;
+var btnTimer = null;  // 170529 김영덕 추가
+var effectTimer = null;
 var viewTimer  = null;
 var cFrame     = 0;
 var capturing  = false;
 var playing    = false;
 var settOpen   = false;
 var frameCount = 0;
-var frameBufferCount = 0;
 var vScale     = 1;
 var cfWidth    = 320, cfHeight = 240;
 var localFile  = "";
@@ -27,13 +28,12 @@ var cbX        = 0, cbY = 0, cbW = 200, cbH = 150;
 var cropX      = 0, cropY = 0;
 var srcWidth   = 0, srcHeight = 0;
 var getNextFrame;
-var getNextFrameBuffer;
+var outputName = null;
 
 var cQuality     = "Medium";
-var cFPS         = 10;
-// 녹화 가능한 최대 프레임 수
+var cFPS         = 12;
 var cMaxFrames   = 500;
-var cSize        = 320;
+var cSize = 320;
 var injectButton = true;
 
 var userLan    = 'en';
@@ -64,24 +64,134 @@ var sizeOptions = ["50", "100", "150", "256", "320", "448"];
 var fpsOptions  = ["1", "5", "7.5", "10", "15", "20", "30"];
 var mfOptions   = ["10", "50", "100", "200", "500", "1000"];
 
+// 170529 김영덕 추가
+var framesBuff = [];
+var firstFrame = null;
+
 start();
 
 function init() {
 	if(elements[ccid]) return;
 	active = true;
 	oBox = ne(document.body, 'div', {id: ccid});
-	ne(oBox, 'video', {src: playbackUrl, id : "playbackVideo", crossOrigin : "anonymous", controls: "controls", width : "480px", height : "280px"});
-	ne(oBox, 'img', {src: chrome.extension.getURL('images/record.png'), id: 'recordBtn', class: 'menuIcon', title: 'Record'});
-	ne(oBox, 'img', {src: chrome.extension.getURL('images/stop.png'), id: 'encodeBtn', class: 'menuIcon', title: 'Encode'});
-	ne(oBox, 'img', {src: chrome.extension.getURL('images/stop.png'), id: 'encodeBufferBtn', class: 'menuIcon', title: 'Encode'});
-	addEvent(elements["recordBtn"], 'click', startCapture, "options");
-	addEvent(elements["encodeBtn"], 'click', generate, "options");
-	addEvent(elements["encodeBufferBtn"], 'click', generateFromBuffer, "options");
-	findVideo();
+	//ne(oBox, 'video', {src: playbackUrl, id : "playbackVideo", crossOrigin : "anonymous", controls: "controls", width : "480px", height : "280px"});
+	//document.getElementById("playbackVideo").setAttribute('style', 'display:none;');
+	//ne(oBox, 'img', {src: chrome.extension.getURL('images/record.png'), id: 'recordBtn', class: 'menuIcon', title: 'Record'});
+	//ne(oBox, 'img', {src: chrome.extension.getURL('images/stop.png'), id: 'encodeBtn', class: 'menuIcon', title: 'Encode'});
+	//addEvent(elements["recordBtn"], 'click', startCapture, "options");
+    //addEvent(elements["encodeBtn"], 'click', generate, "options");
+    //addEvent(elements["recordBtn"], 'click', generate, "options");
+    var logo = ne(oBox, 'div', { id: "extLogo", class: "extLogo" });
+    ne(logo, 'div', { id: "logo1", class: "logo1" }, "GIF Convertor for Youtube");
+    ne(logo, 'div', { id: "logo2", class: "logo2" }, "Converted GIF: " + cFPS + "fps, " + cQuality + " Quality, " + cSize + "px Size");
+
+    ne(oBox, 'div', { id: "resultBox", class: "resultBox" });
+
+    var menuBar = ne(oBox, 'div', { id: "extMenuBar", class: "extMenuBar" });
+
+    var tmpElemt = ne(menuBar, 'span', { id: "extSettings" });
+    ne(tmpElemt, 'img', { src: chrome.extension.getURL('images/settings.png'), width: "12px", height: "12px" });
+    ne(tmpElemt, 'span', {}, 'Settings');
+
+    var tmpElemt = ne(menuBar, 'div', { id: "settingMenu1", class: "settingMenu" });
+    ne(tmpElemt, 'span', { class: "settingName" }, "FPS");
+    tmpElemt = ne(tmpElemt, 'span', { class: "settingContainer" });
+    ne(tmpElemt, 'span', { class: "settingItem", param: 12 }, "12");
+    ne(tmpElemt, 'span', { class: "settingItem", param: 15 }, "15");
+    ne(tmpElemt, 'span', { class: "settingItem", param: 24 }, "24");
+    ne(tmpElemt, 'span', { class: "settingItem", param: 30 }, "30");
+
+    var tmpElemt = ne(menuBar, 'div', { id: "settingMenu2", class: "settingMenu" });
+    ne(tmpElemt, 'span', { class: "settingName" }, "Quality");
+    tmpElemt = ne(tmpElemt, 'span', { class: "settingContainer" });
+    ne(tmpElemt, 'span', { class: "settingItem", param: "High" }, "High");
+    ne(tmpElemt, 'span', { class: "settingItem", param: "Medium" }, "Medium");
+    ne(tmpElemt, 'span', { class: "settingItem", param: "Low" }, "Low");
+
+    var tmpElemt = ne(menuBar, 'div', { id: "settingMenu3", class: "settingMenu" });
+    ne(tmpElemt, 'span', { class: "settingName" }, "Width");
+    tmpElemt = ne(tmpElemt, 'span', { class: "settingContainer" });
+    ne(tmpElemt, 'span', { class: "settingItem", param: 150 }, "150");
+    ne(tmpElemt, 'span', { class: "settingItem", param: 256 }, "256");
+    ne(tmpElemt, 'span', { class: "settingItem", param: 320 }, "320");
+    ne(tmpElemt, 'span', { class: "settingItem", param: 448 }, "448");
+
+    var tmpElemt = ne(menuBar, 'div', { id: "confirmSetting", class: "confirmSetting" }, "Applying.....");
+
+    var btnTimes = ne(menuBar, 'span', { id: "btnTimes" });
+    tmpElemt = ne(btnTimes, 'span', { id: "btnTime5", class: "btnTime", title: "Extract 5 Seconds" });
+    ne(tmpElemt, 'img', { src: chrome.extension.getURL('images/timeback.png'), width: "12px", height: "12px" });
+    ne(tmpElemt, 'span', {}, '5s');
+    tmpElemt = ne(btnTimes, 'span', { id: "btnTime10", class: "btnTime", title: "Extract 10 Seconds" });
+    ne(tmpElemt, 'img', { src: chrome.extension.getURL('images/timeback.png'), width: "12px", height: "12px" });
+    ne(tmpElemt, 'span', {}, '10s');
+
+    addEvent(elements["btnTime5"], 'click', function (e) { generate(e, 5); }, "options");
+    addEvent(elements["btnTime10"], 'click', function (e) { generate(e, 10); }, "options");
+    // 170529 김영덕 추가
+    //addEvent(elements["playbackVideo"], 'play', startCapture, "options");
+    //addEvent(elements["playbackVideo"], 'pause', pauseCapture, "options");
+    findVideo();
+
+    $("#extSettings").click(function () {
+        pauseCapture();
+        $(this).hide("slow", function () {
+            $('#settingMenu1 .settingContainer .settingItem[param="' + cFPS + '"]').css("background-color", "#00CE00");
+            $("#settingMenu1").show("fast");
+        });
+    });
+
+    $("#settingMenu1 .settingContainer .settingItem").click(function (e) {
+        $('#settingMenu1 .settingContainer .settingItem[param="' + cFPS + '"]').css("background-color", "black");
+        setSetting("f", $(this).attr("param"));
+        $("#settingMenu1").hide("slow", function () {
+            $('#settingMenu2 .settingContainer .settingItem[param="' + cQuality + '"]').css("background-color", "#00CE00");
+            $("#settingMenu2").show("fast");
+        });
+    });
+    $("#settingMenu2 .settingContainer .settingItem").click(function (e) {
+        $('#settingMenu2 .settingContainer .settingItem[param="' + cQuality + '"]').css("background-color", "black");
+        setSetting("q", $(this).attr("param"));
+        $("#settingMenu2").hide("slow", function () {
+            $('#settingMenu3 .settingContainer .settingItem[param="' + cSize + '"]').css("background-color", "#00CE00");
+            $("#settingMenu3").show("fast");
+        });
+    });
+    $("#settingMenu3 .settingContainer .settingItem").click(function (e) {
+        $('#settingMenu3 .settingContainer .settingItem[param="' + cSize + '"]').css("background-color", "black");
+        setSetting("w", $(this).attr("param"));
+        $("#settingMenu3").hide("slow", function () {
+            $("#confirmSetting").show("fast", function () {
+                $("#confirmSetting").delay(500).hide("slow", function () {
+                    $("#extSettings").show("fast");
+                    $("#logo2").hide("slow", function () {
+                        clearInterval(btnTimer);
+                        btnTimer = setInterval(applyBtnCSS, 500);
+                        frameCount = 0;
+                        framesBuff = [];
+                        if (source.played) {
+                            startCapture();
+                        }
+                        $(this).text("Converted GIF: " + cFPS + "fps, " + cQuality + " Quality, " + cSize + "px Size").show("fast");
+                    });
+                });
+            });
+        });
+    });
+}
+
+function setSetting(type, value) {
+    if (type === "f") {
+        cFPS = value;
+    } else if (type === "q") {
+        cQuality = value;
+    } else if (type === "w") {
+        cSize = value;
+    }
 }
 
 function loadSettings() {
-	cFPS         = (localStorage["cfps"]) ? localStorage["cfps"] : 10;
+	cFPS         = (localStorage["cfps"]) ? localStorage["cfps"] : 12;
 	cMaxFrames   = (localStorage["cmaxframe"]) ? localStorage["cmaxframe"] : 500;
 	cQuality     = (localStorage["cquality"]) ? localStorage["cquality"] : "Medium";
 	cSize        = (localStorage["csize"]) ? localStorage["csize"] : 320;
@@ -136,15 +246,31 @@ function ne(parent, element, attr, intxt) {
 	return el;
 }
 
+function ce(parent, element, attr, intxt){
+	if(document.getElementById(attr['id']) ==null)
+		return;
+
+	var el = document.getElementById(attr['id']);
+
+	for(var key in attr) {
+		el.setAttribute(key, attr[key]);
+	}
+	if(intxt)  el.textContent = intxt;
+	if('id' in attr) elements[attr['id']] = el;
+	if(parent) parent.appendChild(el);
+	
+	return el;
+}
+
 function de(element) {
 	element.parentNode.removeChild(element);
 	if(typeof elements[element.id] !== 'undefined') delete elements[element.id];
 }
 
 function getVideoElements() {
-	console.log(elements["playbackVideo"]);
-	return elements["playbackVideo"];//return document.getElementsByTagName('video');
-
+	//console.log(elements["playbackVideo"]);
+	//return elements["playbackVideo"];
+	return document.getElementsByTagName('video');
 }
 
 function getVideoEmbed(ec) {
@@ -195,14 +321,34 @@ function videoLoaded(e) {
 	selectVideoElement(et);
 }
 
-function onSeeking(e){
-	pauseCapture(false);
+function onSeeking(e) {
+    //170529 김영덕 수정
+	//pauseCapture(false);
+	console.log("onSeeking");
+    if (capturing){
+    	pauseCapture(false);
+    }
+        
 }
 
-// 검사해서 살릴거 있으면 살리기
-// 자동으로 큐를 비워버렸는데 꼭 그럴필요가 없을 수도
-function onSeeked(e){
-	clearQueue();
+function onSeeked(e) {
+    //170529 김영덕 수정
+	//clearQueue();
+    console.log("onSeeked");
+    clearInterval(btnTimer);
+    btnTimer = setInterval(applyBtnCSS, 500);
+    frameCount = 0;
+    framesBuff = [];
+    if (capturing) {
+        startCapture();
+    }
+}
+
+function onPaused(e) {
+    console.log("onPaused");
+    if (capturing) {
+        pauseCapture(false);
+    }
 }
 
 function selectVideoElement(videoElement) {
@@ -211,17 +357,17 @@ function selectVideoElement(videoElement) {
 	srcWidth  = source.videoWidth;
 	srcHeight = source.videoHeight;
 	
+	console.log(source);
+	
 	if(source.readyState !== 4) {
-		addEvent(source, 'canplay', videoLoaded, "videoLoad");
+        addEvent(source, 'canplay', videoLoaded, "videoLoad");
 		return;
 	}
 	
-	addEvent(source, 'seeking', onSeeking, "seekControll");
-	addEvent(source, 'seeked', onSeeked, "seekControll");
-
-	// 수정한 부분
-	// 버퍼를 쌓기 시작함
-	startCaptureBuffer();
+	addEvent(source, 'seeking', onSeeking, "seekControl");
+    addEvent(source, 'seeked', onSeeked, "seekControl");
+    addEvent(source, 'pause', onPaused, "videoState");
+    addEvent(source, 'play', startCapture, "videoState");
 
 	try {
 		var testImage = getFrameImage(source, 0.1);
@@ -238,21 +384,77 @@ function selectVideoElement(videoElement) {
 		}
 		
 		console.log(err.message);
-	}
+    }
+
+    if (!capturing) {
+        if (source.played) {
+            startCapture();
+        }
+    }
+}
+
+// 170529 김영덕 추가
+function applyBtnCSS() {
+    var buffLen = framesBuff.length;
+    var btn5 = document.getElementById("btnTime5");
+    var btn10 = document.getElementById("btnTime10");
+    if (buffLen >= (cFPS * 10)) {
+        btn5.style["backgroundColor"] = "#00CE00";
+        btn10.style["backgroundColor"] = "#00CE00";
+        clearInterval(btnTimer);
+    } else if (buffLen < (cFPS * 10)) {
+        if (buffLen < (cFPS * 5)) {
+            btn5.style["backgroundColor"] = "#FF758F";
+            btn10.style["backgroundColor"] = "#FF758F";
+        } else {
+            btn5.style["backgroundColor"] = "#00CE00";
+            btn10.style["backgroundColor"] = "#FF758F";
+        }
+    }
 }
 
 function findVideo() {
+	//var videoElements = getVideoElements();
+	//console.log(videoElements)
+	//selectVideoElement(videoElements);
+	
 	var videoElements = getVideoElements();
-	selectVideoElement(videoElements);
+	
+	console.log(videoElements);
+	
+	if(videoElements.length == 1) {
+		selectVideoElement(videoElements[0]);
+	} else if(videoElements.length > 1) {
+		addEvents(videoElements, videoClick);
+		selectVideoElement(videoElements[0]);
+		//setOptions('msg', getMsg('ClickVideo'));
+	} else {
+		var siteInfo = checkSite(document.location.href);
+		
+		if(siteInfo.html5Disabled) {
+			setOptions('prompt', getMsg('HTML5Disabled'), siteInfo.html5EnableAction, closeOptions);
+		} else if(siteInfo.html5Redirect) {
+			setOptions('prompt', getMsg('FlashVideo'), function() {
+				redirect(siteInfo.html5URL, true);
+			}, closeOptions);
+		} else {
+			setOptions('prompt', getMsg('NoVideo'), findVideo);
+			setOptionsButtons(getMsg('Retry'));
+			
+			getVideoEmbed();
+		}
+	}
+
 }
 
 var cBufferMaxFrames = 30;
-var cQueueSize = cBufferMaxFrames + 1;
 var framesFront = 0;
 var framesRear = 0;
 
 function startCapture(e) {
-	if(!capturing && frameCount < cMaxFrames) {
+    // 170529 김영덕 수정
+	//if(!capturing && frameCount < cMaxFrames) {
+    if (!capturing) {
 		if(source.paused) {
 			source.play();
 			source.muted = true;
@@ -266,98 +468,39 @@ function startCapture(e) {
 		}
 		
 		var delay = 1000 / cFPS;
-		var et = e.target || e.srcElement;
+		//var et = e.target || e.srcElement;
 		
-		timer = setInterval(captureFrame, delay);
-		
-		et.value = "Pause";
+        timer = setInterval(captureFrame, delay);
+        // 170529 김영덕 추가: 버튼에 버퍼링 가능할시 표시되도록
+        btnTimer = setInterval(applyBtnCSS, 500);
+
+        // 김영덕 주석처리
+		//et.value = "Pause";
 		capturing = true;
-		elements["recordBtn"].src = chrome.extension.getURL('images/recording.png');
-	} else {
-		if(!source.paused) source.pause();
-		pauseCapture(frameCount >= cMaxFrames);
-	}
+		//elements["recordBtn"].src = chrome.extension.getURL('images/recording.png');
+    }
+    //else {
+	//	if(!source.paused) source.pause();
+	//	pauseCapture(frameCount >= cMaxFrames);
+	//}
 }
 
 function pauseCapture(maxReach) {
 	capturing = false;
-	clearInterval(timer);
-	elements["recordBtn"].value = "Start";
-	elements["recordBtn"].src = chrome.extension.getURL('images/record.png');
+    clearInterval(timer);
+    // 170529 김영덕: btnTimer추가
+    clearInterval(btnTimer);
+    // 170529 김영덕 주석처리
+	//elements["recordBtn"].value = "Start";
+	//elements["recordBtn"].src = chrome.extension.getURL('images/record.png');
 }
-
 
 function captureFrame(e) {
-
-	console.log(frameCount);
-	frames[frameCount++] = getFrameImage(source);
-	if(frameCount >= cMaxFrames) pauseCapture(true);
-}
-
-
-function startCaptureBuffer(){
-	timerBuffer = setInterval(captureFrameBuffer, 1000 / cFPS);
-}
-
-function captureFrameBuffer(e){
-	if(isQueueFull())
-		deQueue();
-
-	enQueue(getFrameImage(source));
-	console.log(frameBufferCount);
-}
-
-
-function isQueueFull(){
-	if(((framesRear+1)%cQueueSize) == framesFront)
-		return true;
-	return false;
-}
-
-function isQueueEmpty(){
-	if(framesRear == framesFront)
-		return true;
-	return false;
-}
-
-function enQueue(frameImage){
-	if(isQueueFull())
-		return;
-
-	frameBufferCount++;
-	framesBuffer[framesRear] = frameImage;
-	framesRear = (framesRear+1)%cQueueSize;
-}
-
-function deQueue(){
-	if(isQueueEmpty())
-		return;
-
-	frameBufferCount--;
-	var frame = framesBuffer[framesFront];
-	framesFront = (framesFront+1)%cQueueSize;
-	return frame;
-}
-
-function clearQueue(){
-	return deQueueFor(frameBufferCount);
-}
-
-// javascript는 함수 오버로딩이 없단다...
-// arguments 변수의 length 같은걸로 구분하란다...
-function deQueueFor(num){
-	// 성능을 생각한 방법
-	var framesFrontDesti = (framesFront+num)%cQueueSize;
-	if(framesFrontDesti > framesRear)
-		return false;
-
-	// 성능은 별로지만 확실한 방법, 유지보수 좋음
-	// for(var i = 0; i < num; i++)
-	// 	DeQueue();
-
-	frameBufferCount -= num;
-	framesFront = framesFrontDesti;
-	return true;
+    // 170529 김영덕 주석처리 및 코드 추가
+    frameCount++;
+    if (frameCount >= cMaxFrames)
+        framesBuff.shift(); // 버퍼의 맨앞의 요소 제거
+    framesBuff.push(getFrameImage(source)); // 버퍼의 맨뒤에 요소 추가
 }
 
 function stopCapture(e) {
@@ -369,25 +512,56 @@ function stopCapture(e) {
 	}
 }
 
+var framesForGIF = new Array();
+var gifFramesCounter = new Array();
+var gifNum = 0;
 
-function stopCaptureBuffer(){
-	clearInterval(timerBuffer);
-}
+function generate(e, seconds) {
 
-function generate() {
+    var resultBox = document.getElementById("resultBox");
 
+    var progressItem = ne(resultBox, 'div', { class: "resultProgressItem" });
+    //ne(progressItem, 'div', { class: "resultProgressBg" }, "0% Completed");
+    ne(progressItem, 'div', { class: "resultProgressBg" });
+    var progressBar = ne(progressItem, 'div', { class: "resultProgressBar" });
+    ne(progressItem, 'div', { class: "resultProgressCaption" }, "0% Completed");
+
+    $(progressItem).show("fast", function () {
+        if ($(resultBox).outerHeight() > 400) {
+            $(resultBox).animate({ "scrollTop": $(progressItem).offset().top }, 500);
+        }
+    });
+
+    // 170529 김영덕 추가 : 버퍼의 내용을 frames배열로 복사
+    frames = framesBuff;
+    frames = frames.slice(0);
+
+    framesForGIF[gifNum] = new Array();
+    framesForGIF[gifNum] = frames.slice(frames.length - (cFPS*seconds));
+    gifFramesCounter[gifNum] = 0;
+
+    console.log("generate Start. cFPS is " + cFPS);
+    // 170529 김영덕 추가 : framesFront 계산 (어디서부터 추출할것인지)
+    if (frames.length >= (cFPS * seconds))
+        framesFront = frames.length - (cFPS * seconds);
+    frames = frames.slice(framesFront); // 이렇게하면 무조건 0번부터 끝까지 쭉 추출하면됨
+    framesRear = frames.length - 1;
 	var cFrame  = 0;
 	var quality = getQuality();
 	var delay   = 1000 / cFPS;
-	var width   = frames[0].width;
-	var height  = frames[0].height;
-	
+    var width = frames[0].width;
+    var height = frames[0].height;
+    firstFrame = frames[0];
+
 	getNextFrame = function() {
 		if(cFrame > frames.length) {
-			// 수정해야말지 모르겠음 주의할 것
 			return {canEncode: false};
 		} 
-		console.log("generate");
+        console.log("generate : " + cFrame + "/" + (frames.length - 1));
+        var progressPercent = cFrame / (frames.length - 1) * 100;
+        $("#resultBox .resultProgressItem .resultProgressBar").css("width", progressPercent + "%");
+        $("#resultBox .resultProgressItem .resultProgressCaption").text(progressPercent.toFixed(0) + "% Completed")
+        // 170529 김영덕 주석처리
 		return {
 			canEncode: true, 
 			frame: cFrame, 
@@ -397,53 +571,95 @@ function generate() {
 			quality: quality, 
 			delay: delay, 
 			imageData: frames[cFrame++].getContext('2d').getImageData(0, 0, width, height).data,
-			// 이 조건이 맞으면 탈출
-			last: (cFrame == frameCount)
+            // 이 조건이 맞으면 탈출
+            last: (cFrame == framesRear)
 		}
 	}
 	
-	chrome.runtime.sendMessage({command: "startEncoding", frameLength: frames.length}, encodingComplete);
+	chrome.runtime.sendMessage({command: "startEncoding", frameLength: frames.length, outputName: outputName}, encodingComplete);
 }
 
-function generateFromBuffer() {
-
-	var cFrame  = framesFront;
-	var quality = getQuality();
-	var delay   = 1000 / cFPS;
-	var width   = framesBuffer[cFrame].width;
-	var height  = framesBuffer[cFrame].height;
-
-	stopCaptureBuffer();
-	
-	getNextFrame = function() {
-		console.log("generate");
-		console.log(cFrame);
-		cFrame = cFrame%cQueueSize;
-		return {
-			canEncode: true, 
-			frame: cFrame, 
-			frameLength: framesBuffer.length, 
-			width: width, 
-			height: height, 
-			quality: quality, 
-			delay: delay, 
-			imageData: framesBuffer[cFrame++].getContext('2d').getImageData(0, 0, width, height).data,
-			// 이 조건이 맞으면 탈출
-			last: (cFrame == framesRear)
-		}
-	}
-	
-	console.log(framesBuffer.length);
-	chrome.runtime.sendMessage({command: "startEncoding", frameLength: framesBuffer.length}, encodingComplete);
-}
-
+var showFramesTimer = new Array;
+var imgDiv = new Array();
 function encodingComplete(response) {
+    console.log("size : " + response.size);
 	localFile = response.url;
 	fileSize  = response.size;
 	sizeMB    = fileSize / 1048576;
-	ne(oBox, 'a', {href: localFile, download: 'animation', id: 'saveLink'},  'GIF 다운로드');
 
+	//if(gifNum > 1)
+		//ce(oBox, 'a', {href: localFile, download: 'animation' + gifNum.toString(), id: 'saveLink' + gifNum.toString()},  'GIF 다운로드 ');
+	//else
+    var resultBox = document.getElementById("resultBox");
+    // 2017.06.07 김영덕 수정
+    var resultItem = ne(resultBox, 'div', { class: "resultItem"});
+    //var downloadItem = ne(resultBox, 'a', { href: localFile, download: 'animation' + gifNum.toString(), id: 'saveLink' + gifNum.toString(), class: "downloadBtn" });
+    var downloadItem = ne(resultItem, 'a', { href: localFile, download: outputName + gifNum.toString(), id: 'saveLink' + gifNum.toString(), class: "downloadBtn" });
+	ne(downloadItem, 'img' , {src : chrome.extension.getURL('images/download.png'), class : "downloadImage"});
+	
+	//ne(oBox, 'canvas', {id: 'canvas1', width : "32", height : "18"});
+	//canvasBox = elements["canvas1"];
+	//ctx = canvasBox.getContext('2d');
+	//ctx.drawImage(canvas, 0, 0, 32, 18);
+	
+	//ne(resultBox, 'canvas' , {id : "firstFrame" , width : "160", height : "90"});
+	//var thumbnailBox = elements["firstFrame"];
+	//var ctx1 = thumbnailBox.getContext('2d');
+	//ctx1.drawImage(firstFrame, 0, 0, 145, 80);
+	
+	// 현재 gif index
+	var nowGif = gifNum;
+	// 첫번째 프레임을 따와서
+    imgDiv[nowGif] = ne(resultItem, 'div', {id: "imgDiv" + nowGif});
+
+    // 2017.06.06 김영덕 추가
+    var xIMG = new XMLHttpRequest();
+    xIMG.open('GET', localFile);
+    xIMG.responseType = 'blob';
+    xIMG.onload = function () {
+        var blob = xIMG.response;
+        var fr = new FileReader();
+        fr.onloadend = function () {
+            ne(imgDiv[nowGif], 'img', { src: fr.result, id: 'framesImg' + nowGif, width: "160", height: "90" });
+        };
+        fr.readAsDataURL(blob);
+    };
+    xIMG.send();
+
+    $(".resultProgressItem").hide("fast", function () {
+        $(resultItem).show("slow", function () {
+            if ($("#resultBox").outerHeight() > 400) {
+                $("#resultBox").animate({ "scrollTop": $(this).offset().top }, 500);
+            }
+        });
+        $(this).remove();
+    });
+
+    //var imageSrc = framesForGIF[gifNum][0].toDataURL("image/png");
+	// img 태그 생성
+	//ne(imgDiv[nowGif], 'img', {src:imageSrc, id:'framesImg' + nowGif, width : "160", height : "90"});
+	// interval 시작
+	//showFramesTimer[nowGif] = setInterval(function(){
+	//	showFrames(null, nowGif);
+	//}, 100);
+	// a 태그 생성
+	//ne(imgDiv[nowGif], 'a', {href: localFile, download: 'animation' + nowGif.toString(), id: 'saveLink' + nowGif.toString()},  'GIF 다운로드 ');
+
+	gifNum++;
 }
+
+function showFrames(e, gifIndex){
+	var imageSrc = framesForGIF[gifIndex][gifFramesCounter[gifIndex]++].toDataURL("image/png");
+	ce(imgDiv[gifIndex], 'img', {src:imageSrc, id:'framesImg' + gifIndex});
+	if(gifFramesCounter[gifIndex] == framesForGIF[gifIndex].length - 1)
+		gifFramesCounter[gifIndex] = 1;
+}
+
+function hideItem(url){
+	alert(url);
+	document.getElementById(url).setAttribute('style', 'display:none;');
+}
+
 
 function getFrameImage(video) {
     var canvas = document.createElement('canvas');
@@ -462,7 +678,6 @@ function getFrameImage(video) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-          
 function start() {
   var pagecontainer=document.getElementById('page-container');
   if (!pagecontainer) return;
@@ -480,7 +695,12 @@ function start() {
           mutations.forEach(function(mutation) {
               if(mutation.addedNodes!==null) {
                 for (var i=0; i<mutation.addedNodes.length; i++) {
-                    if (mutation.addedNodes[i].id=='watch7-main-container') { // || id=='watch7-container'
+                    if (mutation.addedNodes[i].id == 'watch7-main-container') { // || id=='watch7-container'
+                        // 2017.06.07 김영덕 추가;
+                        clearInterval(btnTimer);
+                        btnTimer = setInterval(applyBtnCSS, 500);
+                        frameCount = 0;
+                        framesBuff = [];
                       run();
                       break;
                     }
@@ -503,7 +723,7 @@ function onNodeInserted(e) {
   
 function run() {
   if (document.getElementById(CONTAINER_ID)) return; // check download container
-
+    
   var videoID, videoFormats, videoAdaptFormats, videoManifestURL, scriptURL=null;
   var isSignatureUpdatingStarted=false;
   var operaTable=new Array();
@@ -524,7 +744,9 @@ function run() {
     args=usw.ytplayer.config.args;
   }
   if (args) {
-    videoID=args['video_id'];
+      videoID = args['video_id']; 
+      // 2017.06.07 김영덕 추가
+      outputName = videoID;
     videoFormats=args['url_encoded_fmt_stream_map'];
     videoAdaptFormats=args['adaptive_fmts'];
     videoManifestURL=args['dashmpd'];
@@ -546,7 +768,9 @@ function run() {
     injectScript ('if(ytplayer&&ytplayer.config&&ytplayer.config.args){document.getElementById("'+DEBUG_ID+'2").appendChild(document.createTextNode(\'"video_id":"\'+ytplayer.config.args.video_id+\'", "js":"\'+ytplayer.config.assets.js+\'", "dashmpd":"\'+ytplayer.config.args.dashmpd+\'", "url_encoded_fmt_stream_map":"\'+ytplayer.config.args.url_encoded_fmt_stream_map+\'", "adaptive_fmts":"\'+ytplayer.config.args.adaptive_fmts+\'"\'));}');
     var code=buffer.innerHTML;
     if (code) {
-      videoID=findMatch(code, /\"video_id\":\s*\"([^\"]+)\"/);
+        videoID = findMatch(code, /\"video_id\":\s*\"([^\"]+)\"/);
+        // 2017.06.07 김영덕 추가
+        outputName = videoID;
       videoFormats=findMatch(code, /\"url_encoded_fmt_stream_map\":\s*\"([^\"]+)\"/);
       videoFormats=videoFormats.replace(/&amp;/g,'\\u0026');
       videoAdaptFormats=findMatch(code, /\"adaptive_fmts\":\s*\"([^\"]+)\"/);
@@ -560,7 +784,9 @@ function run() {
   if (videoID==null) { // if all else fails
     var bodyContent=document.body.innerHTML;  
     if (bodyContent!=null) {
-      videoID=findMatch(bodyContent, /\"video_id\":\s*\"([^\"]+)\"/);
+        videoID = findMatch(bodyContent, /\"video_id\":\s*\"([^\"]+)\"/);
+        // 2017.06.07 김영덕 추가
+        outputName = videoID;
       videoFormats=findMatch(bodyContent, /\"url_encoded_fmt_stream_map\":\s*\"([^\"]+)\"/);
       videoAdaptFormats=findMatch(bodyContent, /\"adaptive_fmts\":\s*\"([^\"]+)\"/);
       videoManifestURL=findMatch(bodyContent, /\"dashmpd\":\s*\"([^\"]+)\"/);
